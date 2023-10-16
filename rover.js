@@ -64,26 +64,41 @@ class Rover {
       this.mode = 'NORMAL';
       this.generatorWatts = 110;
    }
-   
+
    receiveMessage(message) {
       let results = [];
       for (let i = 0; i < message.commands.length; i++) {
          let command = message.commands[i];
          if (command.commandType === 'MOVE') {
             if (this.mode === 'NORMAL') {
-               this.position = command.value;
-               results.push({completed: true});
+               this.position += Number(command.value);
+               // get absolute value of command.value
+               let absCommandValue = Math.abs(command.value);
+               this.generatorWatts -= (absCommandValue / 2);
+               if (this.generatorWatts <= 0) {
+                  this.generatorWatts = 0;
+               }
+               if (this.generatorWatts <= 12) {
+                  this.mode = 'LOW_POWER';
+                  results.push({ completed: false });
+                  return;
+               }
+               results.push({ completed: true });
             } else {
-               results.push({completed: false});
+               results.push({ completed: false });
             }
          } else if (command.commandType === 'STATUS_CHECK') {
-            results.push({completed: true, roverStatus: {mode: this.mode, generatorWatts: this.generatorWatts, position: this.position}});
+            results.push({ completed: true, roverStatus: "mode: " + this.mode + " " + "generatorWatts: " + this.generatorWatts + " " + "position: " + this.position });
          } else if (command.commandType === 'MODE_CHANGE') {
             this.mode = command.value;
-            results.push({completed: true});
+            results.push({ completed: true });
+         } else if (command.commandType === "SOLAR_CHARGE") {
+            this.mode = "NORMAL";
+            this.generatorWatts = 110;
+            results.push({ completed: true });
          }
       }
-      return {message: message.name, results: results};
+      return { message: message.name, results: results };
    }
 }
 
